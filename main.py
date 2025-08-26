@@ -1,4 +1,5 @@
 import datetime
+from sys import exit
 from datetime import UTC, datetime as dt_t
 from zoneinfo import ZoneInfo
 import os.path
@@ -19,13 +20,22 @@ def epoch_to_dt(epoch: float, tz_db_str: str) -> dt_t:
 
 def main():
     parser = argparse.ArgumentParser(prog="gcal", description="add calendar event")
+    subparsers = parser.add_subparsers(dest="command", required=True)
     parser.add_argument("-t", "--token-file", default="token.json")
     parser.add_argument("-c", "--credentials-file", default="credentials.json")
-    parser.add_argument("-S", "--summary", required=True)
-    parser.add_argument("-d", "--description", required=False, default="Automatically generated calendar event from gcal-py")
-    parser.add_argument("-s", "--start-time", help="epoch time", required=True)
-    parser.add_argument("-e", "--end-time", help="epoch time")
-    parser.add_argument("-z", "--time-zone", help="in tzinfo db format", default="Etc/UTC")
+
+
+    parser_create = subparsers.add_parser("create", help="add an event. returns the id of the created event.")
+
+    parser_create.add_argument("-S", "--summary", required=True)
+    parser_create.add_argument("-d", "--description", required=False, default="Automatically generated calendar event from gcal-py")
+    parser_create.add_argument("-s", "--start-time", help="epoch time", required=True)
+    parser_create.add_argument("-e", "--end-time", help="epoch time")
+    parser_create.add_argument("-z", "--time-zone", help="in tzinfo db format", default="Etc/UTC")
+
+    parser_delete = subparsers.add_parser("delete", help="delete event at a given ID")
+
+    parser_delete.add_argument("id", help="id of the event to delete")
 
     args = parser.parse_args()
 
@@ -49,8 +59,11 @@ def main():
     try:
         service = build("calendar", "v3", credentials=creds)
         
+    
+        if args.command == "delete":
+            service.events().delete(calendarId="primary", eventId=args.id).execute()
+            exit(0)
         start_time = epoch_to_dt(float(args.start_time), args.time_zone).isoformat()
-
         ev = {
             'summary': args.summary,
             'description': args.description,
@@ -64,7 +77,9 @@ def main():
             },
         }
         
-        print("Event created: " + service.events().insert(calendarId="primary", body=ev).execute().get("htmlLink"))
+        event = service.events().insert(calendarId="primary", body=ev).execute()
+
+        print(event.get("id"))
         
 
     except HttpError as error:
