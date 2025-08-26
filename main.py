@@ -1,5 +1,5 @@
 import datetime
-from sys import exit
+from sys import exit,stderr
 from datetime import UTC, datetime as dt_t
 from zoneinfo import ZoneInfo
 import os.path
@@ -83,7 +83,8 @@ def main():
         
 
     except HttpError as error:
-        print(f"An error occurred: {error}")
+        print(f"An error occurred: {error}", file=stderr)
+        exit(1)
 
 if __name__ == "__main__":
     main()
